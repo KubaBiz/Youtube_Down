@@ -5,6 +5,11 @@ __pycache__/
 paczka/
 build/
 youtube_down.spec
+yt/
+dist/
+ffmpeg/
+Test/
+Test2/
 
 # Distribution / packaging
 .Python
