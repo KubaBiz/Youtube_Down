@@ -2,9 +2,9 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
-*.so
+paczka/
+build/
+youtube_down.spec
 
 # Distribution / packaging
 .Python
