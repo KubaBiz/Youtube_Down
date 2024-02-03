@@ -1,7 +1,13 @@
+import time
 from yt_dlp import YoutubeDL, utils
 import pyperclip
+import threading
 import os
+import re
 from tkinter import END, Tk, StringVar, Radiobutton, Label, OptionMenu, Frame, Entry, Button, filedialog, Menu
+
+link_queue = []
+
 
 def choose_output_options(root):
     # Create variables for checkboxes and entry
@@ -36,23 +42,71 @@ def choose_output_options(root):
             result_label.config(text=f"Format: {format_var.get()}, Bit Rate: 256kb/s, Link: {link_var.get()}")
 
     def on_download_button_click():
-        download_video(link_var.get(), format_var.get(), resolution_var.get())
+        # Create a thread for the background task with arguments
+        if not link_var.get() in link_queue:
+            link_queue.append(link_var.get())
+
+            temp_text = []
+            for widget in progresses_frame.winfo_children():
+                temp_text.append(widget.cget("text"))
+                widget.destroy()
+            
+            #Create new labels
+            global progresses_labels
+            progresses_labels = []
+            # Create new labels
+            for i in range(len(link_queue)):
+                if i<len(temp_text):
+                    label = Label(progresses_frame, text=temp_text[i])
+                else:
+                    label = Label(progresses_frame, text=f"{link_queue[i]}")
+                progresses_labels.append(label)
+                label.pack(pady=5)
+            
+            thread = threading.Thread(target=download_video, args=(link_var.get(), format_var.get(), resolution_var.get()))
+
+            # Start the thread
+            thread.start()
+        #download_video(link_var.get(), format_var.get(), resolution_var.get())
     
     def set_directory():
         folder_path = filedialog.askdirectory(title="Wybierz folder wyjściowy", initialdir='.')
         with open("conf", 'w') as file:
             file.write(folder_path)
 
-    def progress_hook(d):
+    def progress_hook(d, link):
         if d['status'] == 'downloading':
             percent = d['_percent_str']
             speed = d['_speed_str']
             eta = d['eta']
+            
+            root.after(0, update_progress_bars, d, link, d['status'])
             print(f'\rDownloading: {percent} [{speed}] - ETA: {eta} ', end='', flush=True)
         elif d['status'] == 'finished':
+            root.after(0, update_progress_bars, d, link, d['status'])
             print('\nMerging video with audio...')
         elif d['status'] == 'error':
+            root.after(0, update_progress_bars, d, link, d['status'])
             print(f"\nError: {d['error_message']}")
+
+    def update_progress_bars(d, link, status):
+        if status == 'downloading':
+            ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+            percent = ansi_escape.sub('', d['_percent_str'])
+            speed = ansi_escape.sub('', d['_speed_str'])
+            eta = d['eta']
+            # print("\n\n")
+            # print(link_queue.index(link), len(progresses_labels))
+            progresses_label = progresses_labels[link_queue.index(link)]
+            progresses_label.config(text=f"Downloading {link}: {percent} [{speed}] - ETA: {eta}")
+            return
+        # elif status == 'starting':
+        #     progresses_label = progresses_labels[link_queue.index(link)]
+        #     progresses_label.config(text=f"Downloading {link}: {percent} [{speed}] - ETA: {eta} ")
+        #     return
+        elif status == 'finished':
+            progresses_label = progresses_labels[link_queue.index(link)]
+            progresses_label.config(text=f'{link}: Merging video with audio...') 
 
     def download_video(link, format, resolution):
         with open("conf", 'r') as file:
@@ -61,7 +115,7 @@ def choose_output_options(root):
         if format == "mp3": 
             ydl_opts = {
                 'format': 'bestaudio[abr=256k]/bestaudio/best',
-                'progress_hooks': [progress_hook],
+                'progress_hooks': [lambda d: progress_hook(d, link)],
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': format,
@@ -102,8 +156,10 @@ def choose_output_options(root):
                         ydl.download([link])
                         #with YoutubeDL(ydl_opts) as ydl:
                             #info_dict = ydl.extract_info(link, download=True)
+                        progresses_label = progresses_labels[link_queue.index(link)]
+                        progresses_label.config(text=f"Download completed! Title: {info_dict['title']}")
                         print(f"Download completed! Title: {info_dict['title']}", flush=True)
-
+                        link_queue.remove(link)
                     except Exception as e:
                         print(f"Error downloading video: {e}")
                     
@@ -126,11 +182,14 @@ def choose_output_options(root):
     context_menu = Menu(root, tearoff=0)
     context_menu.add_command(label="Paste", command=paste_text)
 
+
     # Create frames
     link_frame = Frame(root)
     format_frame = Frame(root)
     resolution_frame = Frame(root)
     buttons_frame = Frame(root)
+    progresses_frame = Frame(root)
+
 
     # Create checkboxes
     link_label = Label(link_frame, text="Enter Video Link:")
@@ -150,6 +209,7 @@ def choose_output_options(root):
     resolutions = ["2160p", "1440p", "1080p", "720p", "480p", "240p", "144p"]
     resolution_dropdown = OptionMenu(resolution_frame, resolution_var, *resolutions, command=on_checkbox_click)
 
+
     link_label.pack(side="left")
     link_entry.pack(side='left')
     download_button.pack(side='left')
@@ -162,13 +222,17 @@ def choose_output_options(root):
     resolution_label.pack(side="left")
     resolution_dropdown.pack(side='left')
 
+
     result_label = Label(root, text=f"Format: {format_var.get()}, Bit Rate: 256kb/s, Link: {link_var.get()}", wraplength=700)
+
+    #progresses_label = Label(root, text="Waiting for link")
 
     link_frame.pack(pady=10)
     format_frame.pack(pady=10)
     resolution_frame.pack_forget()
     result_label.pack(pady=10)
     buttons_frame.pack(pady=10)
+    progresses_frame.pack(pady=10)
 
 def main():
     root = Tk()
