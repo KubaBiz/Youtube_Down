@@ -1,2 +1,2 @@
 pip freeze > requirements.txt
-pyinstaller --onefile --onefile youtube_down.py
+pyinstaller --onefile --noconsole youtube_down.py
