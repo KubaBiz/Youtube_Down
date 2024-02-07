@@ -1,8 +1,9 @@
 # Youtube_Down
-## Application for downloading videos from Youtube using Python
+## Description
+Application for downloading videos from Youtube made with Python. External libraries used: youtube_dl, tkinter
+## Installation
 
-## Author
+## Usage
 
-KubaBiz
-
-GitHub: (https://github.com/KubaBiz)
+## Authors:
+[KubaBiz](https://github.com/KubaBiz)
