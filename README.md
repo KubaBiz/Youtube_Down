@@ -1,3 +1,8 @@
 # Youtube_Down
-## Application for downloading files from Youtube using Python
-Authors: KubaBiz
+## Application for downloading videos from Youtube using Python
+
+## Author
+
+KubaBiz
+
+GitHub: (https://github.com/KubaBiz)
