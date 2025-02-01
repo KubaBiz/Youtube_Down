@@ -88,7 +88,8 @@ def choose_output_options(root):
     def set_directory():
         folder_path = filedialog.askdirectory(title="Wybierz folder wyjściowy", initialdir='.')
         with open("conf", 'w') as file:
-            file.write(folder_path)
+            if folder_path != '':
+                file.write(folder_path)
 
     # Call GUI updates from ffmpeg
     def progress_hook(d, link):
@@ -131,8 +132,14 @@ def choose_output_options(root):
     def download_video(link, format, resolution):
         ffmpeg_path = '.\\ffmpeg\\bin\\ffmpeg.exe'
 
+        output_path = ''
         with open("conf", 'r') as file:
             output_path = file.read()
+
+        if not os.path.exists(output_path) or not os.access(output_path, os.W_OK):
+            output_path = os.path.join(os.getcwd(), 'downloads')
+            with open("conf", 'w') as file:
+                file.write(output_path)
 
         if platform.system() == 'Windows':
             null_device = 'nul'
